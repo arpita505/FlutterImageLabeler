@@ -54,14 +54,15 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
+
 class _MyHomePageState extends State<MyHomePage> {
   File image;
-  var emptyText = '';
   var isImageLoaded = false;
   final picker = ImagePicker();
+  List<ImageLabel> cloudLabels = List<ImageLabel>();
 
   Future getImage() async {
-      emptyText = '';
+      cloudLabels.clear();
       final pickedFile = await picker.getImage(source: ImageSource.gallery);
 
       setState(() {
@@ -72,19 +73,14 @@ class _MyHomePageState extends State<MyHomePage> {
       FirebaseVisionImage visionImage = FirebaseVisionImage.fromFile(image);
 
       final ImageLabeler cloudLabeler = FirebaseVision.instance.cloudImageLabeler();
-      final List<ImageLabel> cloudLabels = await cloudLabeler.processImage(visionImage);
+      cloudLabels = await cloudLabeler.processImage(visionImage);
 
-      for (ImageLabel label in cloudLabels) {
-        final double confidence = label.confidence;
-        setState(() {
-          emptyText = emptyText + label.text + ' ' + ' ' + confidence.toStringAsFixed(4) + ' \n';
-          print(emptyText);
-        });
-      }
-
+      setState(() {
+        cloudLabels = cloudLabels;
+      });
       cloudLabeler.close();
   }
-
+  
   @override
   Widget build(BuildContext context) {
     // This method is rerun every time setState is called, for instance as done
@@ -101,7 +97,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: Column(
           children: <Widget>[
-        SizedBox(height: 100.0),
+        SizedBox(height: 20.0),
         isImageLoaded ? Center(
             child: Container(
               decoration: BoxDecoration(
@@ -109,26 +105,28 @@ class _MyHomePageState extends State<MyHomePage> {
               ),
               margin: EdgeInsets.fromLTRB(0, 0, 0, 10),
               height: 300,
+              width: 250,
               child: Image.file(
                 image,
                 fit: BoxFit.cover,
               ),
             ))
-            : Container(),
+            : Padding(padding: const EdgeInsets.all(75.0), child: Text("Please select Image",style: TextStyle(fontSize: 25))),
             SizedBox(height: 10.0),
             SizedBox(height: 10.0),
-            emptyText == ''
-                ? Text('')
-                : Expanded(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Text(
-                    emptyText,
-                  ),
-                ),
-              ),
-            )
+            Expanded(
+             child: SizedBox(
+              height: 200.0,
+               child: new ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: cloudLabels.length,
+                  itemBuilder: (context, index) {
+                   return ListTile(
+                    title: Text('${cloudLabels[index].text}'),
+                     trailing: Text('${cloudLabels[index].confidence.toStringAsFixed(2)}'),
+                );
+              },
+            )))
     ]),
         // Center is a layout widget. It takes a single child and positions it
         // in the middle of the parent.
